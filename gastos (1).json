@@ -1,0 +1,773 @@
+{
+  "name": "gastos",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1360,
+        416
+      ],
+      "id": "3b54a8ae-698a-467d-9ce7-3c7334016545",
+      "name": "Telegram Trigger",
+      "webhookId": "5ffe3237-fa4c-429f-b38d-ad5057357544",
+      "credentials": {
+        "telegramApi": {
+          "id": "DyR1XHJ5BRinbkoj",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f42738b8-e360-4ce6-9c84-98eca87134ca",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "texto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9be56096-05f9-4f7d-95a4-010b8d1e8f66",
+                    "leftValue": "={{ $json.message.photo[3].file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "foto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2d6446c9-ce9f-47b4-b3be-850c4c3d08ea",
+                    "leftValue": "={{ $json.message.document.mime_type }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "documento"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "87e00fa7-672c-492f-a97a-1189f80eae04",
+                    "leftValue": "={{ $json.message.voice.file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -1168,
+        400
+      ],
+      "id": "f54fcd6b-2dfa-4667-8a03-0e4fb6a1b75d",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1d674461-89c4-4172-a0b4-9970a4e9843f",
+              "name": "text",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -944,
+        16
+      ],
+      "id": "5e2b89d9-702d-443d-b23e-ae48ca131fae",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres el asistente más eficiente y preciso para la recopilación y organización de datos financieros.\nTu función es extraer y registrar información proveniente de boletas, PDFs, audios o textos que contengan gastos, traspasándolos a una planilla de forma ordenada y clara.\n\n### INSTRUCCIONES PRINCIPALES\n\n1. Extrae solo los datos esenciales:\n   - Fecha del gasto\n   - Monto total (sin puntos, comas ni símbolos)\n   - Glosa o descripción del comercio y tipo de gasto\n   - Código o número de documento (si aplica)\n\n2. Ignora subproductos o detalles internos de la boleta.\n\n3. Formato de salida:\n   Código: [N° de factura, recibo o código generado]  \n   Fecha: dd-mm-yyyy  \n   Monto: ######  \n   Glosa: [nombre del comercio y descripción del gasto]\n\n4. Reglas de procesamiento:\n   - Si no hay fecha, usa la fecha actual: {{ $now.format(\"DD-MM-YYYY\") }}.\n   - Si el texto o audio **no especifica un número de factura o comprobante**, genera un **código único simple** en el formato: `TXT-{{ $json.id || $random.int(1000,9999) }}`.  \n     Ejemplo: `TXT-4821`\n   - Si la entrada proviene de una **imagen o documento (PDF)** y contiene un número de factura, recibo o comprobante, **extráelo y úsalo como Código**.\n   - Si no se detecta ningún identificador en la imagen/documento, genera un código tipo: `DOC-{{ $random.int(1000,9999) }}`.\n   - Si falta algún dato, escribe \"NO PROPORCIONADO\".\n   - Los montos deben ir sin comas ni puntos (ejemplo: 15000).\n   - Mantén un tono profesional y consistente.\n\n### PROCESO INTERNO\n1. Identifica la fuente (texto, audio, imagen o PDF).\n2. Extrae la fecha, el monto, el comercio y el número de documento si existe.\n3. Si no hay número de factura o código visible, genera uno automáticamente según el tipo de fuente.\n4. Verifica que los datos sean coherentes.\n5. Formatea y registra el resultado en el formato establecido.\n\n### QUÉ NO HACER\n- No inventes datos falsos (solo genera el código cuando no exista).\n- No alteres montos ni fechas.\n- No incluyas detalles internos (productos, unidades, etc.).\n- No cambies el formato ni los nombres de campo.\n\n### EJEMPLOS\nEntrada:\n\"Boleta del supermercado, 52500, fecha: 10 de diciembre.\"\nSalida:\nCódigo: TXT-4821  \nFecha: 10-12-2024  \nMonto: 52500  \nGlosa: Supermercado, compra de víveres\n\n---\n\nEntrada:\n\"Factura N° 1023, Librería San Pablo, total 8500, fecha 17-12-2024.\"\nSalida:\nCódigo: 1023  \nFecha: 17-12-2024  \nMonto: 8500  \nGlosa: Librería San Pablo, compra de materiales de oficina\n\n---\n\nEntrada:\n(Audio) “Gasto total en la gasolinera, 10000, no recuerdo la fecha.”\nSalida:\nCódigo: TXT-5932  \nFecha: {{ $now.format(\"DD-MM-YYYY\") }}  \nMonto: 10000  \nGlosa: Gasolinera, gasto en combustible\n\n---\n\nEntrada:\n(PDF o imagen escaneada) “Total 45900, factura Nº 004-978.”\nSalida:\nCódigo: 004-978  \nFecha: {{ $now.format(\"DD-MM-YYYY\") }}  \nMonto: 45900  \nGlosa: NO PROPORCIONADO\n\n---\n\nLa fecha actual del sistema es: {{ $now.format(\"DD-MM-YYYY\") }}.\n\nProcesa el siguiente texto según estas reglas:\n\n{{ $json.text || $json.input || \"NO SE PROPORCIONÓ TEXTO\" }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        48
+      ],
+      "id": "0289b1ff-0b9f-4769-a321-8dcbf324bddb",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        176,
+        512
+      ],
+      "id": "ca523951-cd46-4889-8839-803bc9a5c19e",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "KSfNjclE39Mq04A1",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.message_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        304,
+        448
+      ],
+      "id": "e751c915-769a-47ed-a31c-1fb4f3daa414",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1fwR7YE65vrem8ryaTkPMxKe5IlRbsGZD-nwLGGKY9ko",
+          "mode": "list",
+          "cachedResultName": "GASTOS1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fwR7YE65vrem8ryaTkPMxKe5IlRbsGZD-nwLGGKY9ko/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fwR7YE65vrem8ryaTkPMxKe5IlRbsGZD-nwLGGKY9ko/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "GLOSA": "={{ $fromAI(\"GLOSA\") }}",
+            "FECHA": "={{ $fromAI(\"FECHA\") }}",
+            "MONTO": "={{ $fromAI(\"MONTO\") }}",
+            "CODIGO": "={{ $fromAI(\"CODIGO\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "FECHA",
+              "displayName": "FECHA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "GLOSA",
+              "displayName": "GLOSA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "MONTO",
+              "displayName": "MONTO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CODIGO",
+              "displayName": "CODIGO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        512,
+        384
+      ],
+      "id": "10299c7b-7b68-42c1-9c0c-abd99ce95b07",
+      "name": "Append row in sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "TijZvgKk1XRQyAEN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        784,
+        64
+      ],
+      "id": "7207f811-c053-480b-abd7-3715c9e36419",
+      "name": "Send a text message",
+      "webhookId": "fc559658-0e75-4a07-aa38-78734143d159",
+      "credentials": {
+        "telegramApi": {
+          "id": "DyR1XHJ5BRinbkoj",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[3].file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -912,
+        208
+      ],
+      "id": "1102c8bc-caa6-42ed-859e-470f204000ff",
+      "name": "Get a file",
+      "webhookId": "7f88161d-37e8-4b3e-8b0b-012bc0745796",
+      "credentials": {
+        "telegramApi": {
+          "id": "DyR1XHJ5BRinbkoj",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Accede al campo binario del primer ítem\nconst binaryData = items[0].binary?.data;\n\nif (!binaryData) {\n  throw new Error('No se encontraron datos binarios en el archivo.');\n}\n\n// Extrae el nombre y extensión del archivo\nconst fileName = binaryData.fileName || '';\nconst fileExtension = fileName.split('.').pop().toLowerCase();\n\n// Ajusta el tipo MIME según la extensión\nif (fileExtension === 'jpeg' || fileExtension === 'jpg') {\n  binaryData.mimeType = 'image/jpeg';\n} else if (fileExtension === 'png') {\n  binaryData.mimeType = 'image/png';\n} else {\n  throw new Error('El archivo no es una imagen válida (solo se aceptan JPG o PNG).');\n}\n\n// Devuelve el ítem en el formato que n8n espera\nreturn [\n  {\n    json: { message: 'Imagen lista para análisis OCR' },\n    binary: {\n      data: binaryData\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        112
+      ],
+      "id": "17321f45-1526-4527-bf9b-25225d712426",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "eres un experto  en analista OCR, mira la imagen  y detecta:\n- N° recibo , N° factura , N° comprobante\n-la fecha  DD-MM-YYYY\n-EL monto en Bs.\n- las glosas o detalle de lo que se compro o gasto.\n- detecta el comercio o tienda si es que lo hay.\n- el OUTPUT se lo puedes dar  en JSON ",
+        "inputType": "base64",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -560,
+        96
+      ],
+      "id": "426bbd6d-615a-4bd3-a1c5-5168db6824fa",
+      "name": "Analyze image",
+      "credentials": {
+        "openAiApi": {
+          "id": "KSfNjclE39Mq04A1",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bdb88e62-2496-4e27-80b5-cb64a7d77771",
+              "name": "text",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -352,
+        80
+      ],
+      "id": "d5106f3e-5fe7-4601-9377-63ba03b3e0da",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.document.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -896,
+        368
+      ],
+      "id": "e30adf43-8cad-40e1-bf5e-86f449beb79f",
+      "name": "Get a file1",
+      "webhookId": "80e807e6-7fc3-4223-bec3-bccd8dbd0f20",
+      "credentials": {
+        "telegramApi": {
+          "id": "DyR1XHJ5BRinbkoj",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -960,
+        608
+      ],
+      "id": "627ff528-416b-42b8-bd29-8173980c5559",
+      "name": "Get a file2",
+      "webhookId": "b3feb37b-8b48-4140-9672-5cbe56973cb6",
+      "credentials": {
+        "telegramApi": {
+          "id": "DyR1XHJ5BRinbkoj",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -96,
+        672
+      ],
+      "id": "c2deb46e-9d22-40b3-bbe3-1bf357becc98",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "openAiApi": {
+          "id": "KSfNjclE39Mq04A1",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -688,
+        368
+      ],
+      "id": "29d4ae1e-738a-4aec-9040-6a7a3185e945",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Analiza el siguiente texto y devuelve únicamente un JSON válido con esta estructura:\n\n{\n  \"monto_bs\": \"\",\n  \"fecha\": \"DD-MM-YYYY\",\n  \"detalle\": \"\",\n  \"codigo_factura\": \"\"\n}\n\nTexto a analizar:\n{{ $json.text }}\n",
+              "role": "system"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -480,
+        368
+      ],
+      "id": "9a2a9967-12b5-418d-9183-55373d4f64ad",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "KSfNjclE39Mq04A1",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3933da00-39d0-4d20-8fc6-8b0225a2f619",
+              "name": "text",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -128,
+        368
+      ],
+      "id": "4c786a84-2d26-4af8-8605-a4ca9a1a3aef",
+      "name": "Edit Fields2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a file1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a file2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file2": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0f4e44f0-9b57-486a-8d3d-9c0d625af5f4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "30aa2b7de6f9cb9a57c260cb2a68a4cd7acb134aeaceddfee2eb5dd4153487dc"
+  },
+  "id": "CfrU43t16E2yD0cQ",
+  "tags": []
+}
